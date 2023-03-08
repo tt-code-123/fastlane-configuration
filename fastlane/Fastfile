@@ -1,0 +1,96 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+default_platform(:ios)
+
+platform :ios do
+  skip_docs
+  cocoapods()
+  api_key =  app_store_connect_api_key(
+    key_id: "C2989MWZ5X",
+    issuer_id: "0a9ea7b5-0cf5-43ff-947f-b3fce6d8d5a0",
+    key_filepath: File.join(Dir.pwd, "./AuthKey_C2989MWZ5X.p8"),
+    duration: 1200, # optional (maximum 1200)
+    in_house: false # optional but may be required if using match/sigh
+  )
+  # before_all do |lane|
+  #   cocoapods
+  # end
+
+  private_lane :pgy do
+    pgyer(api_key: "36ee0aff55969af0a391ff9e97d406b4")
+  end
+
+  desc "测试版本 打包上传蒲公英"
+  lane :test do
+    
+    match(
+      type: "adhoc",
+      readonly: is_ci,
+      api_key: api_key
+    )
+    build_ios_app(
+      scheme: "gscmTest",
+      # clean: true,
+    )
+    pgy
+  end
+
+  desc "DEMO版本 打包上传蒲公英"
+  lane :demo do
+    match(
+      type: "adhoc",
+      readonly: is_ci,
+      api_key: api_key
+    )
+    build_ios_app(
+      scheme: "gscmDemo",
+      # clean: true,
+    )
+    pgy
+  end
+
+  desc "正式版本 打包上传蒲公英"
+  lane :prod do
+    match(
+      type: "appstore",
+      readonly: is_ci,
+      api_key: api_key
+    )
+    build_ios_app(
+      scheme: "gscmProduction",
+    )
+    upload_to_app_store(
+      force: true,
+      skip_metadata: true,
+      skip_screenshots: true,
+      api_key: api_key
+    )
+    pgy
+  end
+
+  desc "版本号和编译号修改"
+  lane :ver do |options|
+    increment_version_number(
+      version_number: options[:ver], 
+    )
+    increment_build_number(
+      build_number: options[:num],
+    )
+    # git_commit(path: ["./peach/Info.plist", "./peach.xcodeproj/project.pbxproj"], message: "fix: version & number upload done")
+    # push_to_git_remote
+  end
+
+end
